@@ -1,6 +1,8 @@
 package org.example;
 
 import com.opencsv.CSVWriter;
+
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.*;
@@ -20,6 +22,9 @@ public class Main {
         System.out.println("Процесс запущен...");
 
         try {
+            // Шаг 0: Убедиться, что ненормализованная БД существует
+            initializeSqliteDatabase();
+
             // Шаг 1: Перенос данных из SQLite в PostgreSQL (импорт)
             transferDataFromSqliteToPostgres();
 
@@ -30,6 +35,53 @@ public class Main {
 
         } catch (SQLException | IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public static void initializeSqliteDatabase() throws SQLException {
+        // Проверяем, существует ли файл. Если да, ничего не делаем.
+        File dbFile = new File("denormalized_data.sqlite");
+        if (dbFile.exists()) {
+            System.out.println("Файл SQLite уже существует.");
+            return;
+        }
+
+        System.out.println("Создаю и наполняю базу данных SQLite...");
+        try (Connection conn = DriverManager.getConnection(SQLITE_DB_URL);
+             Statement stmt = conn.createStatement()) {
+
+            // SQL для создания таблицы
+            String createTableSQL = "CREATE TABLE denormalized_flights (" +
+                                                                            "flight_number TEXT,\n" +
+                                                                            "departure_airport_code TEXT,\n" +
+                                                                            "departure_airport_name TEXT,\n" +
+                                                                            "departure_city TEXT,\n" +
+                                                                            "departure_country TEXT,\n" +
+                                                                            "arrival_airport_code TEXT,\n" +
+                                                                            "arrival_airport_name TEXT,\n" +
+                                                                            "arrival_city TEXT,\n" +
+                                                                            "arrival_country TEXT,\n" +
+                                                                            "departure_time TEXT,\n" +
+                                                                            "arrival_time TEXT,\n" +
+                                                                            "airline_name TEXT,\n" +
+                                                                            "aircraft_model TEXT,\n" +
+                                                                            "aircraft_capacity INTEGER,\n" +
+                                                                            "passenger_first_name TEXT,\n" +
+                                                                            "passenger_last_name TEXT,\n" +
+                                                                            "passenger_passport_number TEXT,\n" +
+                                                                            "seat_number TEXT)";
+            stmt.execute(createTableSQL);
+
+            // SQL для вставки данных
+            String insertDataSQL = "INSERT INTO denormalized_flights VALUES " +
+                    "                                     ('SU101', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', 'JFK', 'John F. Kennedy', 'New York', 'USA', '2023-10-27 10:00:00', '2023-10-27 12:30:00', 'Aeroflot', 'Boeing 777', 300, 'Ivan', 'Ivanov', '12345678', '12A'),\n" +
+                    "                                     ('SU101', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', 'JFK', 'John F. Kennedy', 'New York', 'USA', '2023-10-27 10:00:00', '2023-10-27 12:30:00', 'Aeroflot', 'Boeing 777', 300, 'Maria', 'Petrova', '87654321', '12B'),\n" +
+                    "                                     ('LH220', 'FRA', 'Frankfurt Airport', 'Frankfurt', 'Germany', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', '2023-10-28 14:00:00', '2023-10-28 18:00:00', 'Lufthansa', 'Airbus A320', 180, 'John', 'Smith', '99988877', '5C');" +
+                    "                                     ('LH220', 'FRA', 'Frankfurt Airport', 'Frankfurt', 'Germany', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', '2023-10-28 14:00:00', '2023-10-28 18:00:00', 'Lufthansa', 'Airbus A320', 180, 'Jonathan', 'Smith', '99988877', '5C');";
+            stmt.execute(insertDataSQL);
+            // Повторить для всех строк
+
+            System.out.println("База данных SQLite создана.");
         }
     }
 

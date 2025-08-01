@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:latest
+    container_name: flight_data_processor_container
+    restart: always
+    environment:
+      POSTGRES_DB: airline_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./create_normalized_db.sql:/docker-entrypoint-initdb.d/create_normalized_db.sql
+
+volumes:
+  postgres_data:
