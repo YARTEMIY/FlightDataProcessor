@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:14-alpine
+    container_name: airline_postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: airline_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./create_normalized_db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d airline_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  java-app:
+    build: .
+    container_name: flight_data_processor
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres-db:5432/airline_db
+      DB_USER: postgres
+      DB_PASSWORD: 1234
+
+volumes:
+  postgres_data:
