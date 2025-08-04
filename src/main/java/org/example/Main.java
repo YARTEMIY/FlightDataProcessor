@@ -8,27 +8,19 @@ import java.io.IOException;
 import java.sql.*;
 
 public class Main {
-
-    // --- НАСТРОЙКИ ПОДКЛЮЧЕНИЯ ---
-    // Путь к ненормализованной базе данных SQLite
     private static final String SQLITE_DB_URL = "jdbc:sqlite:denormalized_data.sqlite";
-
-    // Параметры для подключения к нормализованной базе данных PostgreSQL
-    private static final String POSTGRES_DB_URL = "jdbc:postgresql://localhost:5432/airline_db";
-    private static final String POSTGRES_USER = "postgres"; // Ваш пользователь
-    private static final String POSTGRES_PASSWORD = "1234"; // ВАШ ПАРОЛЬ
+    private static final String POSTGRES_DB_URL = System.getenv().getOrDefault("DB_URL", "jdbc:postgresql://localhost:5432/airline_db");
+    private static final String POSTGRES_USER = System.getenv().getOrDefault("DB_USER", "postgres");
+    private static final String POSTGRES_PASSWORD = System.getenv().getOrDefault("DB_PASSWORD", "1234");
 
     public static void main(String[] args) {
         System.out.println("Процесс запущен...");
 
         try {
-            // Шаг 0: Убедиться, что ненормализованная БД существует
             initializeSqliteDatabase();
 
-            // Шаг 1: Перенос данных из SQLite в PostgreSQL (импорт)
             transferDataFromSqliteToPostgres();
 
-            // Шаг 2: Экспорт отчета из PostgreSQL в CSV-файл
             exportFlightReportToCsv("flight_report.csv");
 
             System.out.println("Процесс успешно завершен!");
@@ -39,49 +31,34 @@ public class Main {
     }
 
     public static void initializeSqliteDatabase() throws SQLException {
-        // Проверяем, существует ли файл. Если да, ничего не делаем.
         File dbFile = new File("denormalized_data.sqlite");
+
         if (dbFile.exists()) {
-            System.out.println("Файл SQLite уже существует.");
-            return;
+            dbFile.delete();
         }
 
         System.out.println("Создаю и наполняю базу данных SQLite...");
         try (Connection conn = DriverManager.getConnection(SQLITE_DB_URL);
              Statement stmt = conn.createStatement()) {
 
-            // SQL для создания таблицы
             String createTableSQL = "CREATE TABLE denormalized_flights (" +
-                                                                            "flight_number TEXT,\n" +
-                                                                            "departure_airport_code TEXT,\n" +
-                                                                            "departure_airport_name TEXT,\n" +
-                                                                            "departure_city TEXT,\n" +
-                                                                            "departure_country TEXT,\n" +
-                                                                            "arrival_airport_code TEXT,\n" +
-                                                                            "arrival_airport_name TEXT,\n" +
-                                                                            "arrival_city TEXT,\n" +
-                                                                            "arrival_country TEXT,\n" +
-                                                                            "departure_time TEXT,\n" +
-                                                                            "arrival_time TEXT,\n" +
-                                                                            "airline_name TEXT,\n" +
-                                                                            "aircraft_model TEXT,\n" +
-                                                                            "aircraft_capacity INTEGER,\n" +
-                                                                            "passenger_first_name TEXT,\n" +
-                                                                            "passenger_last_name TEXT,\n" +
-                                                                            "passenger_passport_number TEXT,\n" +
-                                                                            "seat_number TEXT)";
+                    "flight_number TEXT, departure_airport_code TEXT, departure_airport_name TEXT, " +
+                    "departure_city TEXT, departure_country TEXT, arrival_airport_code TEXT, " +
+                    "arrival_airport_name TEXT, arrival_city TEXT, arrival_country TEXT, " +
+                    "departure_time TEXT, arrival_time TEXT, airline_name TEXT, " +
+                    "aircraft_model TEXT, aircraft_capacity INTEGER, passenger_first_name TEXT, " +
+                    "passenger_last_name TEXT, passenger_passport_number TEXT, seat_number TEXT)";
             stmt.execute(createTableSQL);
 
-            // SQL для вставки данных
             String insertDataSQL = "INSERT INTO denormalized_flights VALUES " +
-                    "                                     ('SU101', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', 'JFK', 'John F. Kennedy', 'New York', 'USA', '2023-10-27 10:00:00', '2023-10-27 12:30:00', 'Aeroflot', 'Boeing 777', 300, 'Ivan', 'Ivanov', '12345678', '12A'),\n" +
-                    "                                     ('SU101', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', 'JFK', 'John F. Kennedy', 'New York', 'USA', '2023-10-27 10:00:00', '2023-10-27 12:30:00', 'Aeroflot', 'Boeing 777', 300, 'Maria', 'Petrova', '87654321', '12B'),\n" +
-                    "                                     ('LH220', 'FRA', 'Frankfurt Airport', 'Frankfurt', 'Germany', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', '2023-10-28 14:00:00', '2023-10-28 18:00:00', 'Lufthansa', 'Airbus A320', 180, 'John', 'Smith', '99988877', '5C');" +
-                    "                                     ('LH220', 'FRA', 'Frankfurt Airport', 'Frankfurt', 'Germany', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', '2023-10-28 14:00:00', '2023-10-28 18:00:00', 'Lufthansa', 'Airbus A320', 180, 'Jonathan', 'Smith', '99988877', '5C');";
-            stmt.execute(insertDataSQL);
-            // Повторить для всех строк
+                    "('SU101', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', 'JFK', 'John F. Kennedy', 'New York', 'USA', '2023-10-27 10:00:00', '2023-10-27 12:30:00', 'Aeroflot', 'Boeing 777', 300, 'Ivan', 'Ivanov', '12345678', '12A')," +
+                    "('SU101', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', 'JFK', 'John F. Kennedy', 'New York', 'USA', '2023-10-27 10:00:00', '2023-10-27 12:30:00', 'Aeroflot', 'Boeing 777', 300, 'Maria', 'Petrova', '87654321', '12B')," +
+                    "('LH220', 'FRA', 'Frankfurt Airport', 'Frankfurt', 'Germany', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', '2023-10-28 14:00:00', '2023-10-28 18:00:00', 'Lufthansa', 'Airbus A320', 180, 'John', 'Smith', '99988877', '5C')," +
+                    "('LH220', 'FRA', 'Frankfurt Airport', 'Frankfurt', 'Germany', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', '2023-10-28 14:00:00', '2023-10-28 18:00:00', 'Lufthansa', 'Airbus A320', 180, 'Jonathan', 'Jones', '11122233', '5D')";
 
-            System.out.println("База данных SQLite создана.");
+            stmt.execute(insertDataSQL);
+
+            System.out.println("База данных SQLite создана и наполнена.");
         }
     }
 
@@ -99,7 +76,6 @@ public class Main {
 
             postgresConn.setAutoCommit(false);
 
-            // Запросы остались те же
             String insertAirportSQL = "INSERT INTO airports (airport_code, airport_name, city, country) VALUES (?, ?, ?, ?) ON CONFLICT (airport_code) DO NOTHING";
             String insertAirlineSQL = "INSERT INTO airlines (airline_name) VALUES (?) ON CONFLICT (airline_name) DO NOTHING RETURNING airline_id";
             String insertAircraftSQL = "INSERT INTO aircrafts (model, capacity, airline_id) VALUES (?, ?, ?) ON CONFLICT DO NOTHING RETURNING aircraft_id";
@@ -115,7 +91,6 @@ public class Main {
                  PreparedStatement psTicket = postgresConn.prepareStatement(insertTicketSQL)) {
 
                 while (rs.next()) {
-                    // 1. Вставка аэропортов (здесь не нужен RETURNING, executeUpdate подходит)
                     psAirport.setString(1, rs.getString("departure_airport_code"));
                     psAirport.setString(2, rs.getString("departure_airport_name"));
                     psAirport.setString(3, rs.getString("departure_city"));
@@ -128,44 +103,35 @@ public class Main {
                     psAirport.setString(4, rs.getString("arrival_country"));
                     psAirport.executeUpdate();
 
-                    // --- ИЗМЕНЕНИЯ ЗДЕСЬ ---
-
-                    // 2. Вставка авиакомпании и получение ее ID
                     psAirline.setString(1, rs.getString("airline_name"));
-                    boolean hasAirlineResult = psAirline.execute(); // Используем execute()
+                    boolean hasAirlineResult = psAirline.execute();
                     ResultSet airlineRs = hasAirlineResult ? psAirline.getResultSet() : null;
                     int airlineId = getGeneratedId(airlineRs, postgresConn, "SELECT airline_id FROM airlines WHERE airline_name = ?", rs.getString("airline_name"));
 
-                    // 3. Вставка самолета и получение его ID
                     psAircraft.setString(1, rs.getString("aircraft_model"));
                     psAircraft.setInt(2, rs.getInt("aircraft_capacity"));
                     psAircraft.setInt(3, airlineId);
-                    boolean hasAircraftResult = psAircraft.execute(); // Используем execute()
+                    boolean hasAircraftResult = psAircraft.execute();
                     ResultSet aircraftRs = hasAircraftResult ? psAircraft.getResultSet() : null;
-                    // Для самолета нужен более сложный запрос для поиска, т.к. нет UNIQUE约束
                     int aircraftId = getGeneratedId(aircraftRs, postgresConn, "SELECT aircraft_id FROM aircrafts WHERE model = ? AND airline_id = ? AND capacity = ?", rs.getString("aircraft_model"), airlineId, rs.getInt("aircraft_capacity"));
 
-                    // 4. Вставка пассажира и получение его ID
                     psPassenger.setString(1, rs.getString("passenger_first_name"));
                     psPassenger.setString(2, rs.getString("passenger_last_name"));
                     psPassenger.setString(3, rs.getString("passenger_passport_number"));
-                    boolean hasPassengerResult = psPassenger.execute(); // Используем execute()
+                    boolean hasPassengerResult = psPassenger.execute();
                     ResultSet passengerRs = hasPassengerResult ? psPassenger.getResultSet() : null;
                     int passengerId = getGeneratedId(passengerRs, postgresConn, "SELECT passenger_id FROM passengers WHERE passport_number = ?", rs.getString("passenger_passport_number"));
 
-                    // 5. Вставка рейса и получение его ID
                     psFlight.setString(1, rs.getString("flight_number"));
                     psFlight.setString(2, rs.getString("departure_airport_code"));
                     psFlight.setString(3, rs.getString("arrival_airport_code"));
                     psFlight.setTimestamp(4, Timestamp.valueOf(rs.getString("departure_time")));
                     psFlight.setTimestamp(5, Timestamp.valueOf(rs.getString("arrival_time")));
                     psFlight.setInt(6, aircraftId);
-                    boolean hasFlightResult = psFlight.execute(); // Используем execute()
+                    boolean hasFlightResult = psFlight.execute();
                     ResultSet flightRs = hasFlightResult ? psFlight.getResultSet() : null;
-                    // Для рейса тоже нужен более сложный запрос
                     int flightId = getGeneratedId(flightRs, postgresConn, "SELECT flight_id FROM flights WHERE flight_number = ? AND departure_time = ? AND aircraft_id = ?", rs.getString("flight_number"), Timestamp.valueOf(rs.getString("departure_time")), aircraftId);
 
-                    // 6. Вставка билета
                     psTicket.setInt(1, flightId);
                     psTicket.setInt(2, passengerId);
                     psTicket.setString(3, rs.getString("seat_number"));
@@ -183,11 +149,9 @@ public class Main {
      * Теперь он корректно обрабатывает случай, когда ResultSet изначально null.
      */
     private static int getGeneratedId(ResultSet rs, Connection conn, String selectQuery, Object... params) throws SQLException {
-        // Проверяем, вернул ли RETURNING результат
         if (rs != null && rs.next()) {
             return rs.getInt(1);
         } else {
-            // Если RETURNING был пуст, ищем ID существующей записи
             try (PreparedStatement ps = conn.prepareStatement(selectQuery)) {
                 for (int i = 0; i < params.length; i++) {
                     ps.setObject(i + 1, params[i]);
@@ -198,7 +162,6 @@ public class Main {
                 }
             }
         }
-        // Если ID не найден ни через RETURNING, ни через SELECT, это исключительная ситуация
         throw new SQLException("Не удалось получить или найти ID для запроса: " + selectQuery);
     }
 
@@ -232,23 +195,17 @@ public class Main {
              ResultSet rs = stmt.executeQuery(query);
              CSVWriter writer = new CSVWriter(new FileWriter(filePath))) {
 
-            // --- ИСПРАВЛЕННЫЙ БЛОК ---
-            // Получаем метаданные для записи заголовков
             ResultSetMetaData metaData = rs.getMetaData();
             int columnCount = metaData.getColumnCount();
 
-            // Создаем массив для хранения заголовков
             String[] headers = new String[columnCount];
-            // В цикле получаем имя каждой колонки. Индексы в JDBC начинаются с 1.
+
             for (int i = 1; i <= columnCount; i++) {
-                // Используем getColumnLabel, чтобы получить псевдонимы (aliases) типа "AS departure_airport"
                 headers[i - 1] = metaData.getColumnLabel(i);
             }
-            // Записываем заголовок CSV файла
-            writer.writeNext(headers);
-            // --- КОНЕЦ ИСПРАВЛЕННОГО БЛОКА ---
 
-            // Записываем все строки данных (без повторной записи заголовков)
+            writer.writeNext(headers);
+
             writer.writeAll(rs, false);
 
             System.out.println("Отчет успешно сохранен.");
