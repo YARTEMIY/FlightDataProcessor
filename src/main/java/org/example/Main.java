@@ -33,9 +33,9 @@ public class Main {
 
     public static void initializeSqliteDatabase() throws SQLException {
         File dbFile = new File("denormalized_data.sqlite");
+
         if (dbFile.exists()) {
-            System.out.println("Файл SQLite уже существует.");
-            return;
+            dbFile.delete();
         }
 
         System.out.println("Создаю и наполняю базу данных SQLite...");
@@ -43,24 +43,12 @@ public class Main {
              Statement stmt = conn.createStatement()) {
 
             String createTableSQL = "CREATE TABLE denormalized_flights (" +
-                                                                            "flight_number TEXT,\n" +
-                                                                            "departure_airport_code TEXT,\n" +
-                                                                            "departure_airport_name TEXT,\n" +
-                                                                            "departure_city TEXT,\n" +
-                                                                            "departure_country TEXT,\n" +
-                                                                            "arrival_airport_code TEXT,\n" +
-                                                                            "arrival_airport_name TEXT,\n" +
-                                                                            "arrival_city TEXT,\n" +
-                                                                            "arrival_country TEXT,\n" +
-                                                                            "departure_time TEXT,\n" +
-                                                                            "arrival_time TEXT,\n" +
-                                                                            "airline_name TEXT,\n" +
-                                                                            "aircraft_model TEXT,\n" +
-                                                                            "aircraft_capacity INTEGER,\n" +
-                                                                            "passenger_first_name TEXT,\n" +
-                                                                            "passenger_last_name TEXT,\n" +
-                                                                            "passenger_passport_number TEXT,\n" +
-                                                                            "seat_number TEXT)";
+                    "flight_number TEXT, departure_airport_code TEXT, departure_airport_name TEXT, " +
+                    "departure_city TEXT, departure_country TEXT, arrival_airport_code TEXT, " +
+                    "arrival_airport_name TEXT, arrival_city TEXT, arrival_country TEXT, " +
+                    "departure_time TEXT, arrival_time TEXT, airline_name TEXT, " +
+                    "aircraft_model TEXT, aircraft_capacity INTEGER, passenger_first_name TEXT, " +
+                    "passenger_last_name TEXT, passenger_passport_number TEXT, seat_number TEXT)";
             stmt.execute(createTableSQL);
 
             String insertDataSQL = "INSERT INTO denormalized_flights VALUES " +
@@ -68,9 +56,10 @@ public class Main {
                     "('SU101', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', 'JFK', 'John F. Kennedy', 'New York', 'USA', '2023-10-27 10:00:00', '2023-10-27 12:30:00', 'Aeroflot', 'Boeing 777', 300, 'Maria', 'Petrova', '87654321', '12B')," +
                     "('LH220', 'FRA', 'Frankfurt Airport', 'Frankfurt', 'Germany', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', '2023-10-28 14:00:00', '2023-10-28 18:00:00', 'Lufthansa', 'Airbus A320', 180, 'John', 'Smith', '99988877', '5C')," +
                     "('LH220', 'FRA', 'Frankfurt Airport', 'Frankfurt', 'Germany', 'SVO', 'Sheremetyevo', 'Moscow', 'Russia', '2023-10-28 14:00:00', '2023-10-28 18:00:00', 'Lufthansa', 'Airbus A320', 180, 'Jonathan', 'Jones', '11122233', '5D')";
+
             stmt.execute(insertDataSQL);
 
-            System.out.println("База данных SQLite создана.");
+            System.out.println("База данных SQLite создана и наполнена.");
         }
     }
 
