@@ -116,7 +116,6 @@ public class Main {
                     ResultSet aircraftRs = hasAircraftResult ? psAircraft.getResultSet() : null;
                     int aircraftId = getGeneratedId(aircraftRs, postgresConn, "SELECT aircraft_id FROM aircrafts WHERE model = ? AND airline_id = ? AND capacity = ?", rs.getString("aircraft_model"), airlineId, rs.getInt("aircraft_capacity"));
 
-                    // 4. Вставка пассажира и получение его ID
                     psPassenger.setString(1, rs.getString("passenger_first_name"));
                     psPassenger.setString(2, rs.getString("passenger_last_name"));
                     psPassenger.setString(3, rs.getString("passenger_passport_number"));
@@ -204,6 +203,7 @@ public class Main {
             for (int i = 1; i <= columnCount; i++) {
                 headers[i - 1] = metaData.getColumnLabel(i);
             }
+
             writer.writeNext(headers);
 
             writer.writeAll(rs, false);
